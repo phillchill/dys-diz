@@ -8,23 +8,21 @@ class LetterScanner
 {
   /// State ///
   Boolean isScanning = true;
-  // DEBUG: useful to disable video during development to start sketch faster
+  // DEBUG: useful to disable video during GUI development to start sketch faster
   Boolean isCapturingVideo = true;
   
   Movie introMovie;
   Movie scanSuccessP;
   Movie scanMistakeP;
+  Movie resultMovie;
   
   Capture capture;
   OpenCV opencv;
   PApplet sketch;
   
-  Boolean isPhotoToBeCaptured = false;
-  Capture photoCaptured;
-  
   int scanWidth, scanHeight;
-  int scaleDownFactor = 1; // increase to increase performance, but loses detection accuracy
-  Rectangle[] faces;
+  int scaleDownFactor = 1; // just leave it at 1
+  Rectangle[] detections;
   
   /// UI ///
   ControlP5 cp5;
@@ -75,13 +73,13 @@ class LetterScanner
     introMovie      = new Movie(this.sketch, "video/test-1-3.mov");
     scanSuccessP    = new Movie(this.sketch, "video/test-1-3.mov");
     scanMistakeP    = new Movie(this.sketch, "video/transit.mov");
+    resultMovie     = scanSuccessP; // initiate resultMovie to prevent nullPointerException 
     
     // resize UI image elements
-    this.title.resize(0 , this.titleHeight);
+    this.title.resize(0 , this.titleHeight); // resize(0,h) scales w proportionally to h
     this.scanShape.resize(0, this.scanShapeHeight);
     
     /// Buttons ///
-    
     this.cp5 = new ControlP5(this.sketch);
     
     // Scan button
@@ -139,14 +137,12 @@ class LetterScanner
     }
   }
   
-  // call run() in draw function of parent sketch
+  // call letterScanner.run() in draw function of parent sketch
   void run() {
     scale(this.scaleDownFactor);
     
     if (this.isCapturingVideo) {
-      
       image(this.capture, 0, 0 );
-      
       if (this.isScanning) {
         this.scan();
       }
@@ -157,9 +153,13 @@ class LetterScanner
   
   void scan() {
     this.opencv.loadImage(this.capture);
-    this.faces = opencv.detect();
-    this.drawScanShape();
+    this.detections = opencv.detect();
     this.drawDetected();
+    this.drawScanShape();
+  }
+  
+  Boolean scanSuccess() {
+    return detections.length > 0;
   }
   
   void toggleScanning() {
@@ -169,6 +169,7 @@ class LetterScanner
   
   void takePhoto() {
     println("takePhoto");
+    
     if (this.isCapturingVideo) {
       this.capture.stop();
     }
@@ -193,46 +194,50 @@ class LetterScanner
     stroke(255, 255, 255, 100);
     //stroke(0, 255, 0);
     strokeWeight(1);  
-    for (int i = 0; i < this.faces.length; i++) {
-      //println(this.faces[i].x + "," + this.faces[i].y);
-      rect(this.faces[i].x, this.faces[i].y, this.faces[i].width, this.faces[i].height);
+    for (int i = 0; i < this.detections.length; i++) {
+      //println(this.detections[i].x + "," + this.detections[i].y);
+      rect(this.detections[i].x, this.detections[i].y, this.detections[i].width, this.detections[i].height);
     }
   }
   
   void drawGUI() {
     if(this.photoAnimationRunning){
       this.photoAnimationTimer = millis() - this.photoAnimationStartTime;
-      //println(this.photoAnimationTimer);
       
       if (this.photoAnimationTimer < this.photoAnimationDuration) {
         drawPhotoAnimation(this.photoAnimationTimer, this.photoAnimationDuration);
       }
       
       if (this.photoAnimationTimer > (this.photoAnimationDuration + 500)) {
-        // start video once
-        println("play success video");
-        if (! (this.scanSuccessP.time() > 0)) {
-          scanSuccessP.play();
+        // start result video once
+        if(this.scanSuccess()){
+          this.resultMovie = this.scanSuccessP;
+          println("play success video");
+        }
+        else {
+          this.resultMovie = this.scanMistakeP;
+          println("play mistake video");
+        }
+        if (! (this.resultMovie.time() > 0)) {
+          this.resultMovie.play();
           this.photoAnimationRunning = false;
           this.photoAnimationTimer = -1;
         }
       }
     }
     
-    if (this.scanSuccessP.time() > 0){
+    if (this.resultMovie.time() > 0){
       // display video continuously
-      //image(scanSuccessP, 0, 0, width, height);
+      //image(this.resultMovie, 0, 0, width, height);
       imageMode(CENTER);
-      image(scanSuccessP, width/2, height/2);
+      image(this.resultMovie, width/2, height/2);
       imageMode(CORNER);
     }
     
-    
-    //TODO: back to start on video end
-    //println(scanSuccessP.time());
-    if (scanSuccessP.time() == scanSuccessP.duration()) {
-      println("scanSuccess video ended");
-      scanSuccessP.stop();
+    //println(resultMovie.time());
+    if (resultMovie.time() == resultMovie.duration()) {
+      println("result video ended");
+      resultMovie.stop();
       this.capture.start();
     }
     
@@ -240,7 +245,6 @@ class LetterScanner
   }
   
   void drawHeader() {
-    // header
     fill(green);
     noStroke();
     rect(0,0, width, this.headerHeight);
@@ -253,7 +257,7 @@ class LetterScanner
   }
   
   void drawPhotoAnimation(int timer, int duration) {
-    //noStroke();
+    noStroke();
     fill(0);
     
     if(timer < duration/2) {
