@@ -4,7 +4,7 @@ LetterScanner scanner;
 
 void setup() {
   size(640, 480);
-    
+  
   classifiers = new StringDict(new String[][] {
     {"P", sketchPath()+"/data/classifiers/cascade-P3.xml"},
   });
@@ -16,6 +16,6 @@ void setup() {
   scanner = new LetterScanner(this, 640, 480, classifiers.get("P"), scanShapes.get("P"));
 }
 
-void draw() {
+void draw() {  
   scanner.run();
 }
