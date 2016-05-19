@@ -15,7 +15,7 @@ class LetterScanner
   Movie scanSuccessP;
   Movie scanMistakeP;
   
-  Capture video;
+  Capture capture;
   OpenCV opencv;
   PApplet sketch;
   
@@ -59,7 +59,6 @@ class LetterScanner
   int photoAnimationTimer       = -1;
   int photoAnimationStartTime   = -1;
   Boolean photoAnimationRunning = false;
-  Boolean hasMovieStarted       = false;
 
   LetterScanner(PApplet sketch, int scanWidth, int scanHeight, String classifierPath, String scanShapePath) {
     this.sketch     = sketch;
@@ -75,7 +74,7 @@ class LetterScanner
     // Videos
     introMovie      = new Movie(this.sketch, "video/test-1-3.mov");
     scanSuccessP    = new Movie(this.sketch, "video/test-1-3.mov");
-    scanMistakeP    = new Movie(this.sketch, "video/test-1-3.mov");
+    scanMistakeP    = new Movie(this.sketch, "video/transit.mov");
     
     // resize UI image elements
     this.title.resize(0 , this.titleHeight);
@@ -135,31 +134,18 @@ class LetterScanner
       ;
     
     if (this.isCapturingVideo) {
-      startVideoCapture();
+      this.capture = new Capture(this.sketch, this.scanWidth/this.scaleDownFactor, this.scanHeight/this.scaleDownFactor);
+      this.capture.start();
     }
-  }
-  
-  void startVideoCapture() {
-    this.video = new Capture(this.sketch, this.scanWidth/this.scaleDownFactor, this.scanHeight/this.scaleDownFactor);
-    this.video.start();
-  }
-  
-  void stopVideoCapture() {
-    if (this.isCapturingVideo){
-      this.video.stop();
-    }
-    
   }
   
   // call run() in draw function of parent sketch
   void run() {
     scale(this.scaleDownFactor);
     
-    //image(introMovie, 0, 0);
-    
     if (this.isCapturingVideo) {
       
-      this.display();
+      image(this.capture, 0, 0 );
       
       if (this.isScanning) {
         this.scan();
@@ -169,13 +155,8 @@ class LetterScanner
     this.drawGUI();
   }
   
-  
-  void display() {
-    image(video, 0, 0 );
-  }
-  
   void scan() {
-    this.opencv.loadImage(video);
+    this.opencv.loadImage(this.capture);
     this.faces = opencv.detect();
     this.drawScanShape();
     this.drawDetected();
@@ -188,8 +169,10 @@ class LetterScanner
   
   void takePhoto() {
     println("takePhoto");
-    //this.isPhotoToBeCaptured = true;
-    this.stopVideoCapture();
+    if (this.isCapturingVideo) {
+      this.capture.stop();
+    }
+    
     this.photoAnimationStartTime = millis();
     this.photoAnimationRunning = true;
   }
@@ -228,16 +211,15 @@ class LetterScanner
       if (this.photoAnimationTimer > (this.photoAnimationDuration + 500)) {
         // start video once
         println("play success video");
-        if (!this.hasMovieStarted) {
+        if (! (this.scanSuccessP.time() > 0)) {
           scanSuccessP.play();
-          this.hasMovieStarted = true;
           this.photoAnimationRunning = false;
           this.photoAnimationTimer = -1;
         }
       }
     }
     
-    if (this.hasMovieStarted){
+    if (this.scanSuccessP.time() > 0){
       // display video continuously
       //image(scanSuccessP, 0, 0, width, height);
       imageMode(CENTER);
@@ -245,11 +227,14 @@ class LetterScanner
       imageMode(CORNER);
     }
     
+    
     //TODO: back to start on video end
     //println(scanSuccessP.time());
-    //if (myMovie.time() == myMovie.duration()) { 
-      // movie must be finished
-    //}
+    if (scanSuccessP.time() == scanSuccessP.duration()) {
+      println("scanSuccess video ended");
+      scanSuccessP.stop();
+      this.capture.start();
+    }
     
     drawHeader();
   }
