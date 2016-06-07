@@ -71,7 +71,7 @@ class LetterScanner
     
     // Videos
     introMovie      = new Movie(this.sketch, "video/test-1-3.mov");
-    scanSuccessP    = new Movie(this.sketch, "video/test-1-3.mov");
+    scanSuccessP    = new Movie(this.sketch, "video/pilka640_1_pp.mp4");
     scanMistakeP    = new Movie(this.sketch, "video/transit.mov");
     resultMovie     = scanSuccessP; // initiate resultMovie to prevent nullPointerException 
     
@@ -222,6 +222,9 @@ class LetterScanner
           this.resultMovie.play();
           this.photoAnimationRunning = false;
           this.photoAnimationTimer = -1;
+          
+          // hide scanning button
+          this.cp5.getController("scanbutton").hide();
         }
       }
     }
@@ -235,10 +238,12 @@ class LetterScanner
     }
     
     //println(resultMovie.time());
-    if (resultMovie.time() == resultMovie.duration()) {
+    if (floor(resultMovie.time()) == floor(resultMovie.duration())) {
       println("result video ended");
       resultMovie.stop();
       this.capture.start();
+      // show scanning button
+      this.cp5.getController("scanbutton").show();
     }
     
     drawHeader();
