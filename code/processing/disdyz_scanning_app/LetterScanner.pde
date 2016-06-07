@@ -70,7 +70,7 @@ class LetterScanner
     //// GUI ////
     
     // Videos
-    introMovie      = new Movie(this.sketch, "video/test-1-3.mov");
+    introMovie      = new Movie(this.sketch, "video/pilka640_1_pp.mp4");
     scanSuccessP    = new Movie(this.sketch, "video/pilka640_1_pp.mp4");
     scanMistakeP    = new Movie(this.sketch, "video/batoh1_2.mp4");
     resultMovie     = scanSuccessP; // initiate resultMovie to prevent nullPointerException 
